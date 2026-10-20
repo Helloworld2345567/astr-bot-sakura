@@ -1,0 +1,1 @@
+"""AstrBot Sakura plugin package."""

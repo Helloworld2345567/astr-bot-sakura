@@ -1,0 +1,12 @@
+{
+  "persona_id": {"description": "启用本插件的人格名称（与 AstrBot 人格配置完全一致）", "type": "string", "default": "猫娘小樱"},
+  "image_base_url": {"description": "图片 API 地址，使用 HTTPS，支持 images/generations 和 images/edits", "type": "string", "default": "https://api.openai.com/v1"},
+  "image_model": {"description": "图片模型名称，按服务商实际支持填写", "type": "string", "default": "gpt-image-1"},
+  "image_api_key_env": {"description": "保存图片 API Key 的环境变量名称（填写变量名，不是密钥）", "type": "string", "default": "SAKURA_IMAGE_API_KEY"},
+  "image_timeout_seconds": {"description": "生图请求超时秒数，范围 5～300", "type": "int", "default": 300},
+  "merge_window_seconds": {"description": "连续消息合并窗口秒数，范围 0.1～10", "type": "float", "default": 2.0},
+  "reference_ttl_seconds": {"description": "同一用户与会话的参考图缓存秒数，范围 1～3600", "type": "int", "default": 600},
+  "admin_user_ids": {"description": "可申请临时管理员的用户 ID 白名单；默认留空，群聊禁止升权", "type": "list", "default": []},
+  "admin_session_ttl_seconds": {"description": "私聊明确授权后的管理员有效期秒数，范围 1～86400", "type": "int", "default": 3600},
+  "high_risk_confirmation_ttl_seconds": {"description": "高危操作二次确认有效期秒数，范围 1～600", "type": "int", "default": 120}
+}

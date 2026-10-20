@@ -1,0 +1,2 @@
+-r requirements.txt
+astrbot==4.28.2
