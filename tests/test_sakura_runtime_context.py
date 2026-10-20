@@ -34,7 +34,7 @@ class RuntimeContextTests(unittest.TestCase):
         ctx = SimpleNamespace(get_config=lambda **kw: {
             "provider_settings": {"computer_use_runtime": "local", "computer_use_require_admin": True}
         })
-        return plugin.Main(ctx, {"admin_user_ids": [TEST_ADMIN_ID]})
+        return plugin.SakuraRuntime(ctx, {"admin_user_ids": [TEST_ADMIN_ID]})
 
     def test_screenshot_explicit_admin_prefix(self):
         main = self.make_plugin()

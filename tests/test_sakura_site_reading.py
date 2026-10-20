@@ -12,7 +12,7 @@ from support import web
 
 class SiteReadingTests(unittest.IsolatedAsyncioTestCase):
     async def test_zhihu_hook_upgrades_basic_and_preserves_member(self):
-        main = plugin.Main(SimpleNamespace())
+        main = plugin.SakuraRuntime(SimpleNamespace())
         event = Event('阅读知乎')
         args = {'url':'https://www.zhihu.com/question/462589216','extract_depth':'basic'}
         await main.enforce_sakura_tool_permissions(event,TavilyExtractWebPageTool(),args)

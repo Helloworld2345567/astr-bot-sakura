@@ -21,7 +21,8 @@ spec = importlib.util.spec_from_file_location(
 package = importlib.util.module_from_spec(spec)
 sys.modules[package_name] = package
 spec.loader.exec_module(package)
-plugin = importlib.import_module(f"{package_name}.main")
-permissions = importlib.import_module(f"{package_name}.permissions")
-flow = importlib.import_module(f"{package_name}.message_flow")
-web = importlib.import_module(f"{package_name}.web_reading")
+entry = importlib.import_module(f"{package_name}.main")
+plugin = importlib.import_module(f"{package_name}.sakura.runtime")
+permissions = importlib.import_module(f"{package_name}.sakura.permissions")
+flow = importlib.import_module(f"{package_name}.sakura.message_flow")
+web = importlib.import_module(f"{package_name}.sakura.web_reading")

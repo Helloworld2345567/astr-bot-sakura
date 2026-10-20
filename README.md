@@ -12,7 +12,7 @@
    https://github.com/Helloworld2345567/astr-bot-sakura
    ```
 
-2. 向**运行 AstrBot 的进程或容器**注入 `SAKURA_IMAGE_API_KEY` 环境变量，其值为图片服务商的密钥，然后重启 AstrBot。可参考 [.env.example](.env.example)；插件不会自动读取 `.env`。Docker 和桌面版配置示例见 [部署说明](docs/deployment.md)。
+2. 向**运行 AstrBot 的进程或容器**注入 `SAKURA_IMAGE_API_KEY` 环境变量，其值为图片服务商的密钥，然后重启 AstrBot。可参考 [examples/env.example](examples/env.example)；插件不会自动读取 `.env`。Docker 和桌面版配置示例见 [部署说明](docs/deployment.md)。
 3. 打开插件配置，设置 `image_base_url` 和 `image_model`。默认 API 地址为 `https://api.openai.com/v1`，默认模型为 `gpt-image-1`；使用兼容服务商时，请改成该服务商支持的地址和模型。兼容接口必须支持 multipart 图片编辑及 JPEG 输出参数。
 4. 在 AstrBot 创建名为 **猫娘小樱** 的人格，并将它绑定到目标平台或会话；不要修改所有会话的默认人格。也可以在插件配置修改 `persona_id`，让它与现有人格名称一致。
 5. 在目标会话发送普通消息，确认先收到文字，再收到一张图。首次部署建议先保持 `admin_user_ids` 为空。
@@ -54,10 +54,32 @@
 
 ## 开发与验证
 
+目录按用途组织，根目录只保留 AstrBot 要求的入口、元数据、配置定义和仓库说明：
+
+```text
+astr-bot-sakura/
+├── main.py                 # AstrBot 事件注册入口
+├── _conf_schema.json       # 插件配置定义
+├── metadata.yaml           # 插件元数据
+├── requirements.txt        # 运行依赖（AstrBot 自动安装）
+├── sakura/                 # 插件实现
+│   ├── runtime.py          # 消息与配图流程
+│   ├── message_flow.py     # 消息合并、命令和参考图
+│   ├── permissions.py      # 权限检查
+│   ├── settings.py         # 配置读取与校验
+│   ├── image_api.py        # 图片生成与编辑客户端
+│   └── web_reading.py      # 网页提取增强
+├── examples/               # 脱敏配置示例
+├── requirements/           # 开发依赖
+├── scripts/                # 发布检查工具
+├── tests/                  # 自动化测试
+└── docs/                   # 部署文档
+```
+
 ```sh
 python -m venv .venv
 # 激活该虚拟环境后执行：
-python -m pip install -r requirements-dev.txt
+python -m pip install -r requirements/dev.txt
 python -m unittest discover -s tests -p "test_*.py" -v
 python scripts/check_release.py
 ```

@@ -11,7 +11,7 @@ services:
       SAKURA_IMAGE_API_KEY: ${SAKURA_IMAGE_API_KEY:?Set the image provider key}
 ```
 
-把 `.env.example` 复制到 **Compose 文件所在目录** 的 `.env`，在本机填写密钥，然后执行 `docker compose up -d`。Compose 文件的服务名应与你实际部署的一致。不要提交 `.env`。
+把 `examples/env.example` 复制到 **Compose 文件所在目录** 的 `.env`，在本机填写密钥，然后执行 `docker compose up -d`。Compose 文件的服务名应与你实际部署的一致。不要提交 `.env`。
 
 在 AstrBot 插件管理中从仓库链接安装本插件，填写图片服务地址、模型并绑定人格。容器必须能够访问图片 API、平台服务及附件下载地址。
 

@@ -8,10 +8,11 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 RELEASE_FILES = (
-    ".gitignore", ".gitattributes", ".env.example", "AGENTS.md", "README.md", "LICENSE",
-    "__init__.py", "main.py", "settings.py", "message_flow.py", "permissions.py", "web_reading.py",
-    "metadata.yaml", "_conf_schema.json", "requirements.txt", "requirements-dev.txt",
-    "scripts/image_api.py", "scripts/check_release.py", "docs/deployment.md",
+    ".gitignore", ".gitattributes", "examples/env.example", "AGENTS.md", "README.md", "LICENSE",
+    "__init__.py", "main.py", "sakura/__init__.py", "sakura/runtime.py", "sakura/settings.py",
+    "sakura/message_flow.py", "sakura/permissions.py", "sakura/web_reading.py", "sakura/image_api.py",
+    "metadata.yaml", "_conf_schema.json", "requirements.txt", "requirements/dev.txt",
+    "scripts/check_release.py", "docs/deployment.md",
     "tests/support.py", "tests/test_sakura_runtime_context.py", "tests/test_sakura_message_flow.py",
     "tests/test_sakura_site_reading.py", "tests/test_sakura_web_permissions.py",
     "tests/test_settings.py", "tests/test_deployment.py",

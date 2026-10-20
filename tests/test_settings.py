@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 
 from support import ROOT, TEST_ADMIN_ID, permissions, plugin
-from sakura_plugin_under_test.settings import Settings
+from sakura_plugin_under_test.sakura.settings import Settings
 
 
 class SettingsTests(unittest.TestCase):
