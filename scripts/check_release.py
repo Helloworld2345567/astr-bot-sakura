@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check release paths and common secret/machine-specific data without printing values."""
 from pathlib import Path, PurePosixPath
+import json
 import re
 import subprocess
 import sys
@@ -16,11 +17,14 @@ RELEASE_FILES = (
     "skills/image-generation/references/direct-api-contract.md",
     "skills/image-generation/references/image-guidance.md",
     "metadata.yaml", "_conf_schema.json", "requirements.txt", "requirements/dev.txt",
-    "scripts/check_release.py", "docs/deployment.md",
+    "scripts/check_release.py", "docs/deployment.md", "docs/video-understanding-design.md",
     "tests/support.py", "tests/test_sakura_runtime_context.py", "tests/test_sakura_message_flow.py",
     "tests/test_sakura_site_reading.py", "tests/test_sakura_web_permissions.py",
     "tests/test_settings.py", "tests/test_deployment.py",
 )
+VIDEO_MANIFEST = ROOT / "video-understanding" / "release-files.json"
+if VIDEO_MANIFEST.is_file():
+    RELEASE_FILES += tuple("video-understanding/" + name for name in json.loads(VIDEO_MANIFEST.read_text(encoding="utf-8")))
 PATTERNS = {
     "machine-specific drive path": re.compile(r"(?<![A-Za-z0-9_])[A-Za-z]:[\\/]"),
     "personal home path": re.compile(r"/(?:home|Users|root)/[A-Za-z0-9_.-]+"),
@@ -47,7 +51,7 @@ def main():
         if not (ROOT / name).is_file():
             errors.append(f"{name}: required release file is missing")
     listed = subprocess.run(["git", "ls-files", "--cached", "-z"], cwd=ROOT, capture_output=True)
-    staged = listed.returncode == 0 and bool(listed.stdout)
+    staged = "--working-tree" not in sys.argv and listed.returncode == 0 and bool(listed.stdout)
     paths = listed.stdout.decode("utf-8").rstrip("\0").split("\0") if staged else RELEASE_FILES
     for name in paths:
         if name not in RELEASE_FILES or ".." in PurePosixPath(name).parts:
