@@ -18,6 +18,14 @@ def is_control(text: str) -> bool:
 
 def wants_reference(text: str) -> bool:
     text = text or ""
+    # A preservation request still targets the attached image.  Keep it on the
+    # edit path so the model receives the original pixels instead of a fresh
+    # text-only generation.
+    if re.search(
+        r"(?:不要|别|不许|不要再)(?:改动|修改|改变|重绘|替换).{0,8}(?:原图|这张图|那张图|参考图)",
+        text,
+    ):
+        return True
     if re.search(r"(?:不要|不用|无需|别|不需要)(?:使用|用)?(?:参考图|参照图|图生图)", text):
         return False
     action = re.search(
@@ -163,6 +171,7 @@ class MessageFlow:
             event.set_extra("_sakura_merged_count", len(batch))
             event.set_extra("_sakura_reference_error", any(entry.image_error for entry in batch))
             images = [image for entry in batch for image in entry.images]
+            inherited = False
             self._prune()
             if event.get_extra("_sakura_reference_error", False):
                 self.references.pop(key, None)
@@ -174,6 +183,13 @@ class MessageFlow:
                 self._prune()
             elif key in self.references:
                 images = self.references[key][1]
+                inherited = True
+            if inherited:
+                # Re-attach the cached pixels to the current event. AstrBot's
+                # normal request collector then sends them to the multimodal
+                # provider as part of this turn's native message context.
+                event.message_obj.message = [*event.message_obj.message, *images]
+                event.set_extra("_sakura_inherited_reference_images", True)
             event.set_extra("_sakura_reference_images", images)
         except BaseException:
             if self.pending.get(key) is batch and batch[-1] is snap:

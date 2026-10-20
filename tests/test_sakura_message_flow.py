@@ -165,6 +165,8 @@ class MessageFlowTests(unittest.IsolatedAsyncioTestCase):
         later = Event("按刚才的图画一张")
         await service.collect(later)
         self.assertEqual(later.get_extra("_sakura_reference_images"), refs)
+        self.assertTrue(later.get_extra("_sakura_inherited_reference_images"))
+        self.assertTrue(any(isinstance(component, Image) for component in later.get_messages()))
         stranger = Event("参考图生成", sender="b")
         await service.collect(stranger)
         self.assertEqual(stranger.get_extra("_sakura_reference_images"), [])
@@ -194,6 +196,7 @@ class MessageFlowTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(flow.wants_reference(text), text)
         for text in ("参考图中动作，你也来模仿一个", "照第二张图的动作画", "按刚才的图画一张"):
             self.assertTrue(flow.wants_reference(text), text)
+        self.assertTrue(flow.wants_reference("不要改动原图啊"))
 
     async def test_invalid_image_cannot_fall_back_to_old_reference(self):
         service = flow.MessageFlow(.01)
@@ -276,7 +279,11 @@ class ImageAPITransportTests(unittest.TestCase):
             self.assertTrue(captured["url"].endswith("/images/edits"))
             self.assertEqual(captured["file"], PNG)
             self.assertEqual(captured["data"]["n"], "1")
-            self.assertEqual(json.loads(output.getvalue())["returned_count"], 1)
+            record = json.loads(output.getvalue())
+            self.assertEqual(record["returned_count"], 1)
+            saved = Path(record["outputs"][0])
+            self.assertEqual(saved.suffix, ".jpg")
+            self.assertTrue(saved.read_bytes().startswith(b"\xff\xd8\xff"))
 
 
 if __name__ == "__main__":

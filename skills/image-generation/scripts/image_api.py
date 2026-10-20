@@ -10,6 +10,7 @@ import argparse
 import base64
 import getpass
 import hashlib
+import io
 import json
 import mimetypes
 import os
@@ -20,6 +21,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import requests
+from PIL import Image, ImageOps
 
 DEFAULT_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_MODEL = "gpt-image-1"
@@ -146,13 +148,40 @@ def request_with_retry(session: requests.Session, method: str, url: str, *, head
     raise AssertionError("unreachable")
 
 
-def save_images(images: list[tuple[bytes, str]], output_dir: Path, stem: str) -> list[Path]:
+def _as_jpeg(data: bytes, quality: int) -> bytes:
+    """Normalize a provider response to a real JPEG, even if it returned PNG."""
+    with Image.open(io.BytesIO(data)) as source:
+        source.load()
+        image = ImageOps.exif_transpose(source)
+        if "A" in image.getbands() or "transparency" in image.info:
+            rgba = image.convert("RGBA")
+            background = Image.new("RGB", rgba.size, (255, 255, 255))
+            background.paste(rgba, mask=rgba.getchannel("A"))
+            image = background
+        else:
+            image = image.convert("RGB")
+        output = io.BytesIO()
+        image.save(output, format="JPEG", quality=quality, optimize=True)
+        return output.getvalue()
+
+
+def save_images(
+    images: list[tuple[bytes, str]],
+    output_dir: Path,
+    stem: str,
+    *,
+    output_format: str = "jpeg",
+    output_compression: int | None = None,
+) -> list[Path]:
     if sum(len(data) for data, _ in images) > MAX_IMAGE_BYTES:
         raise ValueError("combined output images exceed the 24 MiB limit")
     output_dir.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y%m%d-%H%M%S")
     paths: list[Path] = []
     for index, (data, content_type) in enumerate(images, 1):
+        if output_format == "jpeg":
+            data = _as_jpeg(data, output_compression if output_compression is not None else 96)
+            content_type = "image/jpeg"
         suffix = EXTENSIONS[content_type]
         path = output_dir / f"{safe_slug(stem)}-{stamp}-{index}{suffix}"
         path.write_bytes(data)
@@ -275,7 +304,13 @@ def main() -> int:
             print(json.dumps(record, indent=2))
             return 1
         images = response_items(response, session)
-        paths = save_images(images, args.output_dir, args.model)
+        paths = save_images(
+            images,
+            args.output_dir,
+            args.model,
+            output_format=args.output_format,
+            output_compression=args.output_compression,
+        )
         record["outputs"] = [str(path.resolve()) for path in paths]
         record["returned_count"] = len(paths)
         record["verdict"] = "PASS"

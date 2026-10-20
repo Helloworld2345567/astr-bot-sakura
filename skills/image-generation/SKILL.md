@@ -5,7 +5,7 @@ description: Generate images or edit user-selected reference images through a co
 
 # Image generation and reference editing
 
-Use the bundled [Python client](scripts/image_api.py) for image generation and editing. Read the [API contract](references/direct-api-contract.md) and [image guidance](references/image-guidance.md) before a request. The client is self-contained and can be copied with this entire skill directory.
+Use the bundled [Python client](scripts/image_api.py) for image generation and editing. Read the [API contract](references/direct-api-contract.md) and [image guidance](references/image-guidance.md) before a request. The client can be copied with this entire skill directory and requires `requests` plus `Pillow`.
 
 ## Decide whether to run
 
@@ -43,4 +43,4 @@ Use `--dry-run` to validate options without sending a request or requiring a key
 
 Translate descriptive prompts into clear English, preserving exact requested lettering verbatim. Keep the requested subject, pose, style and edit invariants; do not add unrelated changes. The client uses only the options described in its contract, and makes no guarantee that a provider supports a particular model or parameter.
 
-Inspect the saved output, verify the requested edit and actual image format, and report the returned count. An HTTP success is not visual validation. Deliver the actual file using the host's image-send capability; do not expose a host-local path as if a remote chat user could open it. On failure, report the stage and available evidence without exposing secrets or claiming an image was generated or sent. Do not silently retry the whole batch or fall back from editing to generation.
+Inspect the saved output, verify the requested edit and actual image format, and report the returned count. JPEG is the default and the client normalizes provider PNG/WebP responses to JPEG when `--output-format jpeg` is selected. An HTTP success is not visual validation. Deliver the actual file using the host's image-send capability; do not expose a host-local path as if a remote chat user could open it. On failure, report the stage and available evidence without exposing secrets or claiming an image was generated or sent. Do not silently retry the whole batch or fall back from editing to generation.

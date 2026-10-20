@@ -254,6 +254,16 @@ class SakuraRuntime:
             "配图由插件在最终文字回复后统一调用 API；不要自行调用生图技能、Shell 或其他工具重复生图，"
             "不要编造已生成或已发送图片。\n"
         )
+        if event.get_extra("_sakura_reference_images", []):
+            origin = "上一轮缓存" if event.get_extra("_sakura_inherited_reference_images", False) else "本轮消息"
+            req.system_prompt += (
+                f"\n[本轮原生图片上下文：{origin}]\n"
+                "当前请求中附带了用户真实图片。请直接观察图片并结合本轮自然语言判断用户意图："
+                "是保持原图、在原图上编辑、重新生成，还是只讨论图片。"
+                "用户说保持、不改动或只添加某个元素时，保留原图中未要求变化的内容；"
+                "不要把图片当作文字描述，也不要声称看到了不存在的细节。"
+                "插件只负责把模型选择的动作传给对应图片接口。\n"
+            )
         if event.get_extra("_sakura_control", False) or _skip_illustration(event.get_message_str()):
             req.system_prompt += "本轮是命令、[] 指令或明确要求不要生图：只回复文字，不调用生图工具，也不承诺发送配图。\n"
         elif wants_reference(event.get_message_str()):

@@ -13,7 +13,7 @@
    ```
 
 2. 向**运行 AstrBot 的进程或容器**注入 `SAKURA_IMAGE_API_KEY` 环境变量，其值为图片服务商的密钥，然后重启 AstrBot。可参考 [examples/env.example](examples/env.example)；插件不会自动读取 `.env`。Docker 和桌面版配置示例见 [部署说明](docs/deployment.md)。
-3. 打开插件配置，设置 `image_base_url` 和 `image_model`。默认 API 地址为 `https://api.openai.com/v1`，默认模型为 `gpt-image-1`；使用兼容服务商时，请改成该服务商支持的地址和模型。兼容接口必须支持 multipart 图片编辑及 JPEG 输出参数。
+3. 打开插件配置，设置 `image_base_url` 和 `image_model`。默认 API 地址为 `https://api.openai.com/v1`，默认模型为 `gpt-image-1`；使用兼容服务商时，请改成该服务商支持的地址和模型。兼容接口必须支持 multipart 图片编辑及 JPEG 输出参数。插件会把服务商返回的 PNG/WebP 结果统一转换为 JPEG 后再发送。
 4. 在 AstrBot 创建名为 **猫娘小樱** 的人格，并将它绑定到目标平台或会话；不要修改所有会话的默认人格。也可以在插件配置修改 `persona_id`，让它与现有人格名称一致。
 5. 在目标会话发送普通消息，确认先收到文字，再收到一张图。首次部署建议先保持 `admin_user_ids` 为空。
 
