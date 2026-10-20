@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import re
 import time
+import uuid
 from collections import OrderedDict
 from dataclasses import dataclass, field
 
@@ -190,6 +191,7 @@ class MessageFlow:
                 # provider as part of this turn's native message context.
                 event.message_obj.message = [*event.message_obj.message, *images]
                 event.set_extra("_sakura_inherited_reference_images", True)
+            event.set_extra("_sakura_batch_id", uuid.uuid4().hex)
             event.set_extra("_sakura_reference_images", images)
         except BaseException:
             if self.pending.get(key) is batch and batch[-1] is snap:

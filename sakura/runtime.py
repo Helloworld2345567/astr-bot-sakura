@@ -8,6 +8,7 @@ import random
 import re
 import sys
 import tempfile
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
@@ -195,6 +196,7 @@ class SakuraRuntime:
         IncomingControlFilter.target_persona_id = self.settings.persona_id
         self._session_locks: dict[str, asyncio.Lock] = {}
         self._last_variant_by_session: dict[str, str] = {}
+        self._rendered_batches: OrderedDict[tuple[str, str], None] = OrderedDict()
         self.permissions = PermissionManager(config=self.settings.permissions_config())
         self.message_flow = MessageFlow(self.settings.merge_window_seconds)
         self.message_flow.reference_ttl = self.settings.reference_ttl_seconds
@@ -327,6 +329,7 @@ class SakuraRuntime:
 
     async def terminate(self) -> None:
         self.message_flow.clear()
+        self._rendered_batches.clear()
 
     async def select_sakura_flow(self, event: AstrMessageEvent, req: ProviderRequest) -> None:
         conversation = getattr(req, "conversation", None)
@@ -465,6 +468,16 @@ class SakuraRuntime:
         ):
             await event.send(MessageChain().message("请发送或重新发送你指定的参考图，我会用原图编辑生图喵~"))
             return
+
+        batch_id = event.get_extra("_sakura_batch_id")
+        if batch_id:
+            batch_key = (event.unified_msg_origin or event.get_session_id(), str(batch_id))
+            if batch_key in self._rendered_batches:
+                return
+            self._rendered_batches[batch_key] = None
+            self._rendered_batches.move_to_end(batch_key)
+            while len(self._rendered_batches) > 256:
+                self._rendered_batches.popitem(last=False)
 
         session_key = event.unified_msg_origin or event.get_session_id()
         lock = self._session_locks.setdefault(session_key, asyncio.Lock())

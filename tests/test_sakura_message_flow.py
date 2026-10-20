@@ -70,6 +70,7 @@ class MessageFlowTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(second.is_stopped())
         self.assertEqual(second.get_message_str(), "第一条\n第二条")
         self.assertEqual(second.message_obj.message_str, second.message_str)
+        self.assertTrue(second.get_extra("_sakura_batch_id"))
         self.assertIn("第一条", "".join(c.text for c in second.get_messages() if isinstance(c, Plain)))
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "out.png"
@@ -84,6 +85,19 @@ class MessageFlowTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(first.sent), 0)
             self.assertEqual(len(second.sent), 2)  # text, then image
             self.assertFalse(output.exists())
+
+    async def test_same_batch_id_across_event_objects_renders_once(self):
+        main = self.main()
+        first, duplicate = Event("同一轮"), Event("同一轮")
+        first.set_extra("_sakura_batch_id", "batch-1")
+        duplicate.set_extra("_sakura_batch_id", "batch-1")
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "out.jpg"
+            output.write_bytes(PNG)
+            main._render_one = AsyncMock(return_value=output)
+            await main.send_scene_illustration(first)
+            await main.send_scene_illustration(duplicate)
+        main._render_one.assert_awaited_once()
 
     async def test_burst_of_three_keeps_latest_two(self):
         service = flow.MessageFlow(.03)
