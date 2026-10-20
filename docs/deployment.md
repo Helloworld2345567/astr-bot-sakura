@@ -44,6 +44,10 @@ python -m pip install -r plugins/sakura_auto_illustration/requirements.txt
 
 ## 常见问题
 
+插件内附 `skills/image-generation/`，AstrBot 支持发现插件提供的 Skill。可在技能管理中检查可用性，并按需选择目标人格。若已有同名的用户安装技能，请先核对来源，避免误用旧版私有服务配置；本仓库不会覆盖现有技能或修改其启用状态。
+
+需要独立安装时，复制完整的 `skills/image-generation/` 目录到实际 AstrBot 数据目录下的 `skills/`。脚本是自包含的，只需要 `requests`；不要只复制 `SKILL.md`。独立调用的 API 地址、模型、密钥变量名以 Skill 说明为准，WebUI 插件设置不会自动同步到独立脚本。
+
 - **完全没有配图**：确认目标会话使用 `persona_id` 对应的人格，消息不包含命令或 `[]`，且已配置图片服务密钥。配置名称必须与真实人格名称一致。
 - **文字成功、配图失败**：聊天模型和图片服务是两套配置；检查图片服务余额、Key 权限、模型、网络及 JPEG 参数支持情况。不要把 Key 粘贴到日志或 Issue。
 - **参考图请求失败**：服务商必须支持 `/images/edits` 的 multipart `image` 字段。每张输入不超过 10 MiB，单条输入最多 4 张，合计上传不超过 22 MiB。可重新发送较小的 PNG/JPEG/WebP 图片。

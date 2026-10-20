@@ -2,6 +2,6 @@ name: sakura_auto_illustration
 display_name: 小樱自动配图
 desc: 连续消息合并最近两条统一回复和配图；参考图调用图片编辑接口；命令和方括号指令只回复文字；内置普通/临时管理员/高危二次确认权限分级，群聊禁止升权。
 author: Helloworld2345567
-version: 1.5.1
+version: 1.5.2
 repo: https://github.com/Helloworld2345567/astr-bot-sakura
 astrbot_version: '>=4.28.2,<5.0.0'

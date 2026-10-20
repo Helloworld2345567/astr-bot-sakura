@@ -339,7 +339,7 @@ class SakuraRuntime:
         return variant, _mood_hint(message)
 
     async def _render_one(self, event: AstrMessageEvent) -> Path:
-        script = Path(__file__).with_name("image_api.py")
+        script = Path(__file__).resolve().parents[1] / "skills" / "image-generation" / "scripts" / "image_api.py"
         if not script.is_file():
             raise FileNotFoundError("bundled image API client is missing")
         api_key_env = _image_api_key_env(self.settings.image_api_key_env)

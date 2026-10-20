@@ -19,6 +19,14 @@
 
 插件自带图片 API 客户端，无需另外安装生图 Skill、MCP 服务或本地代理。依赖安装异常时，在 **AstrBot 使用的 Python 环境**执行 `python -m pip install -r requirements.txt`，然后重载插件。
 
+## 生图 Skill
+
+完整的 [image-generation Skill](skills/image-generation/SKILL.md) 位于 `skills/image-generation/`，包含使用说明、图片生成/编辑脚本、API 约定、配图指导和 Agent 元数据。插件与 Skill 共用其中的客户端。
+
+AstrBot 4.28.2 可自动发现插件提供的 `skills/` 目录；安装后可在技能管理中检查并按需配置给目标人格。小樱自动配图仍由插件统一执行，Skill 不会为同一轮回复再生成第二张图。
+
+也可以单独复制整个 `skills/image-generation/` 到支持 `SKILL.md` 的宿主技能目录，或在真实 AstrBot 数据目录的 `skills/` 下使用。密钥从环境变量读取，独立使用时需显式传入对应的服务地址和模型；它不会自动读取插件的 WebUI 配置。
+
 可直接使用的人格提示词：
 
 ```text
@@ -67,8 +75,13 @@ astr-bot-sakura/
 │   ├── message_flow.py     # 消息合并、命令和参考图
 │   ├── permissions.py      # 权限检查
 │   ├── settings.py         # 配置读取与校验
-│   ├── image_api.py        # 图片生成与编辑客户端
 │   └── web_reading.py      # 网页提取增强
+├── skills/                 # 可独立部署的技能
+│   └── image-generation/
+│       ├── SKILL.md        # 使用说明与触发规则
+│       ├── scripts/        # 共用的生图与编辑客户端
+│       ├── references/     # API 约定与配图指导
+│       └── agents/         # Agent 元数据
 ├── examples/               # 脱敏配置示例
 ├── requirements/           # 开发依赖
 ├── scripts/                # 发布检查工具

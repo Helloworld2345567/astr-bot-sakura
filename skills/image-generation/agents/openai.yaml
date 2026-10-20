@@ -1,0 +1,4 @@
+interface:
+  display_name: "Image Generation"
+  short_description: "Generate images and edit selected image references"
+  default_prompt: "Use $image-generation to create or edit the requested image with the configured image API."

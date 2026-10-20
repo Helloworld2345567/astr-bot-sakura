@@ -256,7 +256,7 @@ class MessageFlowTests(unittest.IsolatedAsyncioTestCase):
 
 class ImageAPITransportTests(unittest.TestCase):
     def test_edit_posts_original_as_multipart_to_edits_endpoint(self):
-        script = ROOT / "sakura" / "image_api.py"
+        script = ROOT / "skills" / "image-generation" / "scripts" / "image_api.py"
         spec = importlib.util.spec_from_file_location("sakura_image_api_transport_test", script)
         client = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(client)

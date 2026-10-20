@@ -1,6 +1,10 @@
 """Plugin installation contract and publishable repository defaults."""
 import importlib.util
 import json
+import re
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
@@ -25,7 +29,7 @@ class DeploymentTests(unittest.IsolatedAsyncioTestCase):
     async def test_import_is_this_repository_and_client_is_bundled(self):
         self.assertEqual(Path(entry.__file__).resolve(), ROOT / "main.py")
         self.assertEqual(Path(plugin.__file__).resolve(), ROOT / "sakura" / "runtime.py")
-        self.assertTrue((ROOT / "sakura" / "image_api.py").is_file())
+        self.assertTrue((ROOT / "skills" / "image-generation" / "scripts" / "image_api.py").is_file())
 
     async def test_other_personas_keep_their_permission_state(self):
         instance = entry.Main(SimpleNamespace())
@@ -58,6 +62,32 @@ class DeploymentTests(unittest.IsolatedAsyncioTestCase):
         self.assertIs(star_map[entry.__name__].star_cls_type, entry.Main)
         self.assertNotIn(plugin.__name__, star_map)
         self.assertIn("terminate", entry.Main.__dict__)
+
+    async def test_astrbot_discovers_plugin_skill_and_all_references_exist(self):
+        from astrbot.core.skills.skill_manager import SkillManager, _parse_frontmatter_description
+
+        source = ROOT / "skills" / "image-generation"
+        content = (source / "SKILL.md").read_text(encoding="utf-8")
+        self.assertTrue(_parse_frontmatter_description(content))
+        for target in re.findall(r"\[[^\]]+\]\(([^)]+)\)", content):
+            self.assertTrue((source / target).is_file(), target)
+        with tempfile.TemporaryDirectory() as temp:
+            plugins = Path(temp) / "plugins"
+            installed = plugins / "sakura-plugin" / "skills" / "image-generation"
+            shutil.copytree(source, installed, ignore=shutil.ignore_patterns("__pycache__"))
+            manager = SkillManager(skills_root=str(Path(temp) / "local-skills"), plugins_root=str(plugins))
+            self.assertEqual(manager._get_plugin_skill_dir("image-generation"), installed)
+
+    async def test_skill_client_runs_standalone_without_plugin_or_credentials(self):
+        with tempfile.TemporaryDirectory() as temp:
+            target = Path(temp) / "image-generation"
+            shutil.copytree(ROOT / "skills" / "image-generation", target, ignore=shutil.ignore_patterns("__pycache__"))
+            command = [sys.executable, str(target / "scripts" / "image_api.py"), "generate", "--prompt", "A simple blue flower", "--n", "1", "--dry-run"]
+            result = subprocess.run(command, cwd=temp, capture_output=True, text=True, check=True)
+            record = json.loads(result.stdout)
+            self.assertTrue(record["dry_run"])
+            self.assertEqual(record["operation"], "generate")
+            self.assertEqual(record["requested_count"], 1)
 
 
 class ReleaseScanTests(unittest.TestCase):

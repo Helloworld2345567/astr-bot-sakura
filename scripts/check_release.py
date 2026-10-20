@@ -10,7 +10,11 @@ ROOT = Path(__file__).resolve().parents[1]
 RELEASE_FILES = (
     ".gitignore", ".gitattributes", "examples/env.example", "AGENTS.md", "README.md", "LICENSE",
     "__init__.py", "main.py", "sakura/__init__.py", "sakura/runtime.py", "sakura/settings.py",
-    "sakura/message_flow.py", "sakura/permissions.py", "sakura/web_reading.py", "sakura/image_api.py",
+    "sakura/message_flow.py", "sakura/permissions.py", "sakura/web_reading.py",
+    "skills/image-generation/SKILL.md", "skills/image-generation/scripts/image_api.py",
+    "skills/image-generation/agents/openai.yaml",
+    "skills/image-generation/references/direct-api-contract.md",
+    "skills/image-generation/references/image-guidance.md",
     "metadata.yaml", "_conf_schema.json", "requirements.txt", "requirements/dev.txt",
     "scripts/check_release.py", "docs/deployment.md",
     "tests/support.py", "tests/test_sakura_runtime_context.py", "tests/test_sakura_message_flow.py",
