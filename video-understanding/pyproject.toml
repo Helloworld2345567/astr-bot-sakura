@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "video-understanding-core"
-version = "0.1.1"
+version = "0.1.2"
 description = "Scoped audiovisual analysis with a Chat Completions media backend"
 requires-python = ">=3.11"
 dependencies = ["aiohttp>=3.12,<4"]

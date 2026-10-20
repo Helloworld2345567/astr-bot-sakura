@@ -3,21 +3,25 @@ from astrbot.api import star
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.provider import ProviderRequest
 
-from .runtime import VideoRuntime
+from .runtime import VideoInputFilter, VideoRuntime
 
 
 class Main(VideoRuntime, star.Star):
+    @filter.custom_filter(VideoInputFilter, priority=100)
+    async def remember_video_input(self, event: AstrMessageEvent):
+        await self.remember_video(event)
+
     @filter.on_llm_request()
     async def video_inputs(self, event: AstrMessageEvent, req: ProviderRequest):
         await self.prepare_request(event, req)
 
     @filter.llm_tool(name="analyze_video")
-    async def analyze_video(self, event: AstrMessageEvent, source_ref: str, question: str,
+    async def analyze_video(self, event: AstrMessageEvent, question: str, source_ref: str = "latest",
                             start_seconds: float | None = None, end_seconds: float | None = None) -> str:
-        '''Analyze one video explicitly authorized in this conversation. External evidence only.
+        '''Analyze the current, quoted, or recent video directly; no extra user authorization needed.
 
         Args:
-            source_ref(string): Authorized attachment reference or platform URL from video inputs.
+            source_ref(string): Use latest for the current/quoted/recent video; or a video reference/platform URL.
             question(string): User question about the video.
             start_seconds(number): Optional original-video clip start; supply together with end.
             end_seconds(number): Optional original-video clip end; supply together with start.

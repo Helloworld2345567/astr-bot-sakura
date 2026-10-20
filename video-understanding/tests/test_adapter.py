@@ -75,37 +75,40 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
         from astrbot.core.star.star_handler import EventType, star_handlers_registry
         handlers = [h for kind in EventType for h in star_handlers_registry.get_handlers_by_event_type(kind)
                     if h.handler_module_path.startswith(self.name + ".")]
-        self.assertEqual(len(handlers), 5)
+        self.assertEqual(len(handlers), 6)
         self.assertTrue(all(h.handler_module_path == self.entry.__name__ for h in handlers))
         self.assertNotIn(self.runtime.__name__, star_map)
         self.assertEqual(Path(self.entry.__file__).resolve(), self.install / "main.py")
         self.assertTrue((self.install / "video_understanding_core" / "service.py").is_file())
         self.assertTrue((self.install / "docs" / "acceptance.md").is_file())
 
-    async def test_empty_scope_defaults_inactive_and_no_provider_lookup(self):
+    async def test_defaults_need_no_allowlist_and_plain_text_needs_no_provider_lookup(self):
         from astrbot.api import AstrBotConfig
         schema = json.loads((self.install / "_conf_schema.json").read_text(encoding="utf-8"))
         config = AstrBotConfig(config_path=str(self.directory / "config.json"), schema=schema)
         plugin = self.entry.Main(SimpleNamespace(), config)
+        self.assertEqual(plugin.authorize(event()).session, "umo-a")
         req = SimpleNamespace(system_prompt="original")
         await plugin.prepare_request(event(), req)
         self.assertEqual(req.system_prompt, "original")
         self.assertIsNone(plugin.service)
         await plugin.terminate()
 
-    async def test_disabled_scope_hides_only_video_tools_without_mutating_other_requests(self):
+    async def test_disabled_plugin_hides_only_video_tools_without_mutating_other_requests(self):
         from astrbot.core.agent.tool import FunctionTool, ToolSet
         tools = ToolSet(tools=[FunctionTool(name=name, description="test", parameters={})
                                for name in ("analyze_video", "other_tool", "get_video_analysis")])
         req = SimpleNamespace(system_prompt="original", func_tool=tools)
+        self.plugin.config["enabled"] = False
         await self.plugin.prepare_request(event(session="disabled"), req)
         self.assertEqual([tool.name for tool in req.func_tool.tools], ["other_tool"])
         self.assertEqual(len(tools.tools), 3)
 
     async def test_provider_type_checked_without_changing_host(self):
+        from astrbot.api.message_components import Video
         self.provider.provider_config["type"] = "other"
         req = SimpleNamespace(system_prompt="original")
-        await self.plugin.prepare_request(event(), req)
+        await self.plugin.prepare_request(event(components=[Video.fromFileSystem(self.asset)]), req)
         self.assertIn("CHAT_COMPLETIONS_PROVIDER_REQUIRED", req.system_prompt)
         self.assertIsNone(self.plugin.service)
 
@@ -128,13 +131,14 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(quote.get_extra("_video_sources"), sources)
         self.assertNotIn("Cookie", self.plugin.service.backend.config.headers)
 
-    async def test_private_video_without_request_not_ingested(self):
+    async def test_private_video_without_text_is_available_without_confirmation(self):
         from astrbot.api.message_components import Video
         ev = event(text="", components=[Video.fromFileSystem(self.asset)])
         req = SimpleNamespace(system_prompt="original")
         await self.plugin.prepare_request(ev, req)
-        self.assertEqual(req.system_prompt, "original")
-        self.assertIsNone(self.plugin.service)
+        self.assertTrue(req.system_prompt.startswith("original"))
+        self.assertIn("不需要用户额外授权", req.system_prompt)
+        self.assertEqual(len(ev.get_extra("_video_sources")), 1)
 
     async def test_remote_attachment_is_not_fetched_until_job(self):
         from astrbot.api.message_components import Video
@@ -162,12 +166,12 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
         req = SimpleNamespace(system_prompt="")
         await self.plugin.prepare_request(ev, req)
         self.assertIn("SELECT_ONE_VIDEO", req.system_prompt)
-        self.assertFalse(self.plugin.service.resolver.attachments)
+        self.assertIsNone(self.plugin.service)
 
     async def test_model_cannot_supply_arbitrary_source_even_in_enabled_scope(self):
         ev = event()
         output = json.loads(await self.plugin.analyze(ev, str(self.asset), "read host"))
-        self.assertEqual(output["error"], "SOURCE_NOT_AUTHORIZED_FOR_EVENT")
+        self.assertEqual(output["error"], "ATTACHMENT_UNAVAILABLE_RESEND")
         self.assertIsNone(self.plugin.service)
 
     async def test_native_tool_wait_uses_one_reply_owner(self):
@@ -197,3 +201,60 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
         followup = event(mid="follow-up", text="他穿蓝色的吗")
         await self.plugin.prepare_request(followup, SimpleNamespace(system_prompt=""))
         self.assertEqual(followup.get_extra("_video_sources"), ev.get_extra("_video_sources"))
+
+    async def test_video_analysis_needs_no_session_allowlist(self):
+        from astrbot.api.message_components import Video
+        self.plugin.config["allowed_scopes"] = []
+        ev = event(session="any-session", components=[Video.fromFileSystem(self.asset)])
+        await self.plugin.prepare_request(ev, SimpleNamespace(system_prompt=""))
+        self.assertEqual(len(ev.get_extra("_video_sources", [])), 1)
+        self.plugin.config["allowed_scopes"] = ["different-session"]
+        self.assertEqual(self.plugin.authorize(event(session="any-session")).session, "any-session")
+
+    async def test_tool_resolves_current_video_without_prepare_or_attachment_number(self):
+        from astrbot.api.message_components import Video
+        service = await self.plugin.ensure_service()
+        service.submit = AsyncMock(return_value={"job_id": "job-a"})
+        service.wait = AsyncMock(return_value={"status": "COMPLETE", "job_id": "job-a"})
+        ev = event(components=[Video.fromFileSystem(self.asset)])
+        result = json.loads(await self.plugin.analyze(ev, str(self.asset), "总结这个视频"))
+        self.assertEqual(result["status"], "COMPLETE")
+        request = service.submit.call_args.args[0]
+        self.assertTrue(request.source_ref.startswith("att_"))
+        result = json.loads(await self.plugin.analyze(ev, "https://media.example.org/original.mp4?temporary=private", "总结这个视频"))
+        self.assertEqual(result["status"], "COMPLETE")
+        self.assertEqual(service.submit.call_args.args[0].source_ref, request.source_ref)
+
+    async def test_quote_without_chain_or_known_id_uses_own_recent_video(self):
+        from astrbot.api.message_components import Reply, Video
+        ev = event(components=[Video.fromFileSystem(self.asset)])
+        await self.plugin.prepare_request(ev, SimpleNamespace(system_prompt=""))
+        quote = event(components=[Reply(id="host-quote-id-unavailable")], mid="quote-a")
+        req = SimpleNamespace(system_prompt="")
+        await self.plugin.prepare_request(quote, req)
+        self.assertEqual(quote.get_extra("_video_sources"), ev.get_extra("_video_sources"))
+
+    async def test_early_capture_retains_video_when_first_message_does_not_call_llm(self):
+        from astrbot.api.message_components import Video
+        ev = event(text="", components=[Video.fromFileSystem(self.asset)])
+        await self.plugin.remember_video_input(ev)
+        followup = event(text="总结刚才的视频", mid="follow-up")
+        await self.plugin.prepare_request(followup, SimpleNamespace(system_prompt=""))
+        self.assertEqual(followup.get_extra("_video_sources"), ev.get_extra("_video_sources"))
+        self.assertTrue(self.runtime.VideoInputFilter().filter(ev, {}))
+        group = event(components=[Video.fromFileSystem(self.asset)])
+        group.is_private_chat = lambda: False
+        self.assertFalse(self.runtime.VideoInputFilter().filter(group, {}))
+
+    async def test_same_user_previous_reference_works_without_turn_grant_but_other_user_cannot_read(self):
+        from astrbot.api.message_components import Video
+        ev = event(components=[Video.fromFileSystem(self.asset)])
+        await self.plugin.prepare_request(ev, SimpleNamespace(system_prompt=""))
+        ref = ev.get_extra("_video_sources")[0]
+        service = self.plugin.service
+        service.submit = AsyncMock(return_value={"job_id": "job-a"})
+        service.wait = AsyncMock(return_value={"status": "COMPLETE"})
+        self.assertEqual(json.loads(await self.plugin.analyze(event(mid="next"), ref, "q"))["status"], "COMPLETE")
+        other = json.loads(await self.plugin.analyze(event(user="other", mid="other"), ref, "q"))
+        self.assertEqual(other["error"], "ATTACHMENT_UNAVAILABLE_RESEND")
+        service.submit.assert_awaited_once()

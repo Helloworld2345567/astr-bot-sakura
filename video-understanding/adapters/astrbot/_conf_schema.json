@@ -1,9 +1,7 @@
 {
-  "enabled": {"type": "bool", "default": true, "description": "启用插件；仍须配置 allowed_scopes"},
+  "enabled": {"type": "bool", "default": true, "description": "启用视频分析；所有会话直接可用，无需额外授权"},
   "analysis_provider_ref": {"type": "string", "default": "", "description": "已验证 MP4 image_url 透传的 openai_chat_completion 提供商 ID；复用宿主认证"},
-  "allowed_scopes": {"type": "list", "default": [], "description": "允许处理的完整 UMO 列表；空列表不处理任何会话"},
   "allowed_sources": {"type": "list", "default": ["attachment", "bilibili", "douyin"], "description": "允许的输入来源"},
-  "private_attachments": {"type": "bool", "default": false, "description": "允许所配置私聊在未明确提问时向聊天模型提供视频工具引用"},
   "source_cookie_file": {"type": "string", "default": "", "description": "管理员提供的 Netscape Cookie 文件路径；仅提取器读取，不发送给模型或聊天"},
   "max_download_mib": {"type": "int", "default": 50, "description": "每作品实际下载累计上限 MiB，音画两流合计"},
   "max_inline_mib": {"type": "int", "default": 8, "description": "归一化 MP4 上限 MiB；是产品预算，不代表服务已验证上限"},
