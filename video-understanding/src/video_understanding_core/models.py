@@ -4,8 +4,9 @@ import math
 
 
 class VideoError(Exception):
-    def __init__(self, code: str):
+    def __init__(self, code: str, *, http_status: int | None = None):
         self.code = code
+        self.http_status = http_status if type(http_status) is int and 100 <= http_status <= 599 else None
         super().__init__(code)
 
 

@@ -2,5 +2,5 @@ name: video_understanding
 display_name: 通用视频理解
 desc: 会话隔离的视频声画分析；复用指定 Chat Completions 提供商，保留当前聊天人格。
 author: Helloworld2345567
-version: 0.1.0
+version: 0.1.1
 astrbot_version: '>=4.28.2,<5.0.0'

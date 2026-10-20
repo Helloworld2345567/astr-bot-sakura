@@ -187,6 +187,19 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["error"], "MODEL_TIMEOUT_MAY_BE_BILLED")
         self.assertEqual(self.backend.calls, 1)
 
+    async def test_provider_http_status_survives_job_storage_and_restart(self):
+        from unittest.mock import AsyncMock
+        self.backend.analyze = AsyncMock(side_effect=VideoError("PROVIDER_UPSTREAM_ERROR", http_status=400))
+        result = await self.finish()
+        self.assertEqual(result["status"], "FAILED")
+        self.assertEqual(result["error"], "PROVIDER_UPSTREAM_ERROR")
+        self.assertEqual(result["http_status"], 400)
+        self.assertEqual(result["failed_stage"], "ANALYZING")
+        self.backend.analyze.assert_awaited_once()
+        await self.service.close()
+        self.service = VideoService(self.root / "store", self.backend, processor=FakeProcessor())
+        self.assertEqual(self.service.get(result["job_id"], self.caller)["http_status"], 400)
+
     async def test_daily_job_limit_survives_delete_and_restart(self):
         self.service.limits = replace(self.service.limits, daily_jobs_per_user=1)
         job = await self.finish()

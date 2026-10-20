@@ -83,6 +83,32 @@ def validate_result(content, prepared):
         raise VideoError("INVALID_MODEL_RESULT") from None
 
 
+async def provider_http_error(response):
+    """Keep status and a fixed classification, never arbitrary provider text."""
+    status = response.status
+    code = {401: "PROVIDER_AUTH_FAILED", 403: "PROVIDER_AUTH_FAILED",
+            429: "PROVIDER_RATE_LIMITED", 404: "PROVIDER_ENDPOINT_NOT_FOUND",
+            400: "PROVIDER_REQUEST_REJECTED", 422: "PROVIDER_REQUEST_REJECTED"}.get(status)
+    if code is None:
+        code = ("PROVIDER_SERVER_ERROR" if status >= 500 else
+                "PROVIDER_REDIRECT_REJECTED" if 300 <= status < 400 else "PROVIDER_HTTP_ERROR")
+    if status in (400, 422) or status >= 500:
+        raw = bytearray()
+        try:
+            async for chunk in response.content.iter_chunked(8192):
+                raw.extend(chunk)
+                if len(raw) > 8192:
+                    break
+            if len(raw) <= 8192:
+                body = json.loads(raw)
+                error = body.get("error") if isinstance(body, dict) else None
+                if isinstance(error, dict) and error.get("type") == "upstream_error":
+                    code = "PROVIDER_UPSTREAM_ERROR"
+        except (ValueError, TimeoutError, aiohttp.ClientError):
+            pass  # A diagnostic body failure must not erase the received HTTP status.
+    return VideoError(code, http_status=status)
+
+
 class ChatCompletionsGemini:
     def __init__(self, config: BackendConfig, limits):
         self.config, self.limits = config, limits
@@ -128,9 +154,7 @@ class ChatCompletionsGemini:
                 async with client.post(self.config.base_url.rstrip("/") + "/chat/completions",
                                        data=body, headers=headers, allow_redirects=False) as response:
                     if response.status != 200:
-                        code = {401: "PROVIDER_AUTH_FAILED", 403: "PROVIDER_AUTH_FAILED",
-                                429: "PROVIDER_RATE_LIMITED"}.get(response.status, "PROVIDER_HTTP_ERROR")
-                        raise VideoError(code)
+                        raise await provider_http_error(response)
                     raw = bytearray()
                     async for chunk in response.content.iter_chunked(65536):
                         raw.extend(chunk)

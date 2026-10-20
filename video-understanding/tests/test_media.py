@@ -159,6 +159,49 @@ class RealMediaTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(VideoError, "MEDIA_TOO_LARGE"):
             backend.payload(media, "q")
 
+    async def test_upstream_400_keeps_status_without_leaking_error_body_or_retrying(self):
+        media = await self.processor.prepare(self.voiced, self.directory, AnalysisRequest("att", "q"))
+        backend = ChatCompletionsGemini(BackendConfig("https://provider.example.org/v1", "test-secret", "m"), self.limits)
+        body = json.dumps({"error": {"type": "upstream_error", "message":
+            "Upstream request failed test-secret https://private.example/?token=private"}}).encode()
+        session = Session([Response(body, status=400)])
+        with patch("video_understanding_core.backend.aiohttp.ClientSession", return_value=session):
+            with self.assertRaises(VideoError) as caught:
+                await backend.analyze(media, "q")
+        self.assertEqual(caught.exception.code, "PROVIDER_UPSTREAM_ERROR")
+        self.assertEqual(caught.exception.http_status, 400)
+        self.assertEqual(str(caught.exception), "PROVIDER_UPSTREAM_ERROR")
+        self.assertEqual(len(session.sent), 1)
+
+    async def test_non_json_rejections_are_classified_without_echoing_body(self):
+        media = await self.processor.prepare(self.voiced, self.directory, AnalysisRequest("att", "q"))
+        backend = ChatCompletionsGemini(BackendConfig("https://provider.example.org/v1", "test-secret", "m"), self.limits)
+        for status, code in ((400, "PROVIDER_REQUEST_REJECTED"), (422, "PROVIDER_REQUEST_REJECTED"),
+                             (404, "PROVIDER_ENDPOINT_NOT_FOUND"), (502, "PROVIDER_SERVER_ERROR"),
+                             (302, "PROVIDER_REDIRECT_REJECTED")):
+            session = Session([Response(b"private-body", status=status)])
+            with self.subTest(status=status), patch("video_understanding_core.backend.aiohttp.ClientSession", return_value=session):
+                with self.assertRaises(VideoError) as caught:
+                    await backend.analyze(media, "q")
+                self.assertEqual(caught.exception.code, code)
+                self.assertEqual(caught.exception.http_status, status)
+
+    async def test_error_diagnostics_are_bounded_and_do_not_override_auth_failure(self):
+        from video_understanding_core.backend import provider_http_error
+        consumed = []
+        class Content:
+            async def iter_chunked(self, size):
+                for i in range(100):
+                    consumed.append(i)
+                    yield b"x" * size
+        response = Response(status=400)
+        response.content = Content()
+        error = await provider_http_error(response)
+        self.assertEqual((error.code, error.http_status), ("PROVIDER_REQUEST_REJECTED", 400))
+        self.assertEqual(len(consumed), 2)
+        auth = await provider_http_error(Response(b'{"error":{"type":"upstream_error"}}', status=401))
+        self.assertEqual(auth.code, "PROVIDER_AUTH_FAILED")
+
 
 class DownloadTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):

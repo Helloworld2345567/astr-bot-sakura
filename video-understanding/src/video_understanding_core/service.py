@@ -190,8 +190,10 @@ class VideoService:
         except TimeoutError:
             self.store.update(job_id, "FAILED", {"error": "JOB_TIMEOUT_MAY_BE_BILLED", "failed_stage": stage_name})
         except VideoError as error:
-            LOGGER.info("job=%s stage=%s error=%s", job_id, stage_name, error.code)
-            self.store.update(job_id, "FAILED", {"error": error.code, "failed_stage": stage_name, "stage_timings": dict(timings)})
+            LOGGER.info("job=%s stage=%s error=%s http_status=%s", job_id, stage_name, error.code, error.http_status)
+            details = {"http_status": error.http_status} if error.http_status is not None else {}
+            self.store.update(job_id, "FAILED", {"error": error.code, "failed_stage": stage_name,
+                                               "stage_timings": dict(timings), **details})
         except Exception:
             # Never expose URLs, request bodies, provider exceptions, or host paths.
             self.store.update(job_id, "FAILED", {"error": "INTERNAL_ERROR"})
